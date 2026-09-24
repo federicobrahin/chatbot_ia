@@ -58,7 +58,7 @@ def crear_sistema_difuso():
 # ==========================================
 # 2. INTERFAZ Y CONEXIÓN A GEMINI
 # ==========================================
-st.set_page_config(page_title="Sistema Experto Culinario", page_icon="⚙️")
+st.set_page_config(page_title="ChefBot Inteligente", page_icon="👨‍🍳")
 
 # --- BARRA LATERAL CON INFORMACIÓN DEL PROYECTO ---
 with st.sidebar:
@@ -77,13 +77,13 @@ with st.sidebar:
     st.caption("Universidad del Norte Santo Tomás de Aquino (UNSTA)")
 
 # --- TÍTULO PRINCIPAL ---
-st.title("⚙️ Sistema Experto Difuso Integrado con LLM")
-st.markdown("Determinación de complejidad culinaria mediante Lógica Difusa y generación de recetas asistida por Inteligencia Artificial.")
+st.title("👨‍🍳 ChefBot Experto Difuso con IA")
+st.markdown("Calculo la complejidad del plato mediante Lógica Difusa y genero la receta paso a paso utilizando Inteligencia Artificial.")
 st.divider() 
 
 # Configuración de estado inicial
 if "mensajes" not in st.session_state:
-    st.session_state.mensajes = [{"role": "assistant", "content": "Bienvenido al Sistema Experto. Por favor, ingrese los ingredientes disponibles (separados por coma o espacio):"}]
+    st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! Bienvenido a ChefBot. ¿Qué ingredientes tenés disponibles? (Podés separarlos por coma o espacios, ej: pollo cebolla papa)"}]
 if "estado_chat" not in st.session_state:
     st.session_state.estado_chat = "pidiendo_ingredientes"
 if "datos" not in st.session_state:
@@ -94,7 +94,7 @@ for msj in st.session_state.mensajes:
     with st.chat_message(msj["role"]):
         st.markdown(msj["content"])
 
-prompt = st.chat_input("Ingrese los datos solicitados...")
+prompt = st.chat_input("Escribe tu respuesta aquí...")
 
 if prompt:
     st.session_state.mensajes.append({"role": "user", "content": prompt})
@@ -105,16 +105,16 @@ if prompt:
         st.session_state.datos['ingredientes_lista'] = [i.strip() for i in re.split(r',|\sy\s|\s+', prompt) if i.strip()]
         st.session_state.datos['cant_ingredientes'] = len(st.session_state.datos['ingredientes_lista'])
         
-        respuesta = "Datos registrados. A continuación, ingrese el tiempo disponible para la preparación (en minutos):"
+        respuesta = "¡Excelente! Ahora decime, ¿cuánto **tiempo libre** tenés para cocinar hoy? (en minutos, ej: 30)"
         st.session_state.estado_chat = "pidiendo_tiempo"
 
     elif st.session_state.estado_chat == "pidiendo_tiempo":
         try:
             st.session_state.datos['tiempo'] = int(prompt.strip())
-            respuesta = "Correcto. Por último, indique su nivel de habilidad culinaria en una escala del 1 al 10 (1 = Principiante, 10 = Experto):"
+            respuesta = "Perfecto. Por último, del 1 al 10, ¿qué tan **hábil** sos en la cocina? (1 = Principiante, 10 = Experto)"
             st.session_state.estado_chat = "pidiendo_habilidad"
         except ValueError:
-            respuesta = "Error de validación: Por favor, ingrese únicamente un valor numérico entero."
+            respuesta = "Por favor, ingresá únicamente un número entero (ej: 45)."
 
     elif st.session_state.estado_chat == "pidiendo_habilidad":
         try:
@@ -129,61 +129,66 @@ if prompt:
             simulador.compute()
             puntaje = simulador.output['complejidad']
             
-            if puntaje < 35: categoria = "Baja (Receta Básica)"
-            elif puntaje < 70: categoria = "Media (Receta Elaborada)"
-            else: categoria = "Alta (Alta Cocina / Desafiante)"
+            if puntaje < 35: categoria = "Básica y rápida 🟢"
+            elif puntaje < 70: categoria = "Elaborada 🟡"
+            else: categoria = "Gourmet / Desafiante 🔴"
 
-            # --- LLAMADA A GEMINI CON SECRETS, SPINNER Y TIMEOUT EXTENDIDO ---
+            # --- LLAMADA A GEMINI OPTIMIZADA PARA VELOCIDAD ---
             try:
                 api_key = st.secrets["GEMINI_API_KEY"]
                 genai.configure(api_key=api_key)
                 
                 modelo = genai.GenerativeModel('gemini-3.6-flash')
                 
-                with st.spinner('Procesando inferencia lógica y comunicando con el modelo de lenguaje...'):
+                with st.spinner('👨‍🍳 El chef está analizando los datos y creando tu receta... Un momento por favor.'):
                     prompt_gemini = f"""
-                    Actúe como un asistente culinario profesional. El usuario solicita una receta con los siguientes ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
+                    Sos un chef profesional. El usuario te pidió cocinar con estos ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
                     
-                    REGLA DE VALIDACIÓN ESTRICTA: Analice si TODOS los elementos ingresados son ingredientes culinarios reales y comestibles. 
-                    Si el usuario ingresó objetos no comestibles (ej. herramientas, materiales de construcción, tóxicos) o cadenas sin sentido:
-                    Indique formalmente que el sistema experto solo procesa ingredientes alimenticios y solicite al usuario que reinicie la consulta. No genere ninguna receta.
+                    REGLA ESTRICTA: Analizá si TODOS los ingredientes son comestibles y reales. 
+                    Si el usuario ingresó objetos no comestibles (ej: tornillos, maderas):
+                    Respondé educadamente que el sistema solo procesa alimentos y pedí que reinicie. No des ninguna receta.
 
-                    Si los ingredientes son válidos, proceda bajo estas directivas:
-                    El motor de inferencia difuso determinó que la receta debe tener una complejidad de categoría: {categoria} (Valor de defusificación: {puntaje}/100).
-                    Tiempo disponible: {st.session_state.datos['tiempo']} minutos. Nivel de habilidad del usuario: {st.session_state.datos['habilidad']}/10.
-                    Redacte una receta formal, clara y estructurada que cumpla con estos parámetros. Utilice formato Markdown con viñetas y títulos adecuados.
+                    Si los ingredientes SON comestibles:
+                    El sistema experto determinó una complejidad: {categoria} (Puntaje: {puntaje}/100).
+                    Tiempo disponible: {st.session_state.datos['tiempo']} minutos. Habilidad: {st.session_state.datos['habilidad']}/10.
+                    
+                    Dame una receta paso a paso que cumpla con estos criterios. Sé directo, amigable y usá viñetas.
+                    MUY IMPORTANTE: Sé BREVE y conciso. Evitá textos muy largos.
                     """
                     
-                    # Timeout extendido a 60 segundos para evitar el error 499
-                    respuesta_gemini = modelo.generate_content(prompt_gemini, request_options={"timeout": 60})
+                    # Forzamos a la IA a responder más rápido limitando la longitud de la respuesta
+                    respuesta_gemini = modelo.generate_content(
+                        prompt_gemini,
+                        generation_config={"max_output_tokens": 500, "temperature": 0.5},
+                        request_options={"timeout": 90}
+                    )
                     receta = respuesta_gemini.text
                     
             except KeyError:
-                receta = "❌ Error interno: No se ha configurado la variable de entorno GEMINI_API_KEY en los secretos del servidor."
+                receta = "❌ Error: No se encontró la API Key en los secretos de Streamlit (st.secrets)."
             except Exception as e:
-                receta = f"❌ Error de comunicación con la API externa: La operación tardó demasiado o fue interrumpida. Detalle técnico: {e}"
+                receta = f"❌ Error de conexión: La inteligencia artificial tardó demasiado en responder. (Detalle: {e})"
 
             respuesta = f"""
-            🧠 **Resultados del Motor de Inferencia Difuso:**
-            - **Valor de salida (Defusificación):** {puntaje:.2f}/100
-            - **Categoría asignada:** {categoria}
+            🧠 **Diagnóstico del Sistema Experto Difuso:**
+            - Complejidad: **{puntaje:.2f}/100** ({categoria})
             
-            👨‍🍳 **Resolución del Modelo de Lenguaje (LLM):**
+            👨‍🍳 **Receta Generada por IA:**
             {receta}
             
-            *(Ingrese la palabra "reiniciar" para ejecutar una nueva consulta)*
+            *(Escribí "reiniciar" si querés probar con otra consulta)*
             """
             st.session_state.estado_chat = "terminado"
             
         except ValueError:
-            respuesta = "Error de validación: Por favor, ingrese un número entero del 1 al 10."
+            respuesta = "Por favor, ingresá un número del 1 al 10."
             
     elif st.session_state.estado_chat == "terminado" and prompt.lower() == "reiniciar":
-        st.session_state.mensajes = [{"role": "assistant", "content": "Sistema reiniciado. Por favor, ingrese los ingredientes disponibles (separados por coma o espacio):"}]
+        st.session_state.mensajes = [{"role": "assistant", "content": "¡Vamos de nuevo! ¿Qué cocinamos hoy? ¿Qué ingredientes tenés disponibles?"}]
         st.session_state.estado_chat = "pidiendo_ingredientes"
         st.rerun()
     else:
-        respuesta = "Comando no reconocido. Ingrese 'reiniciar' para iniciar un nuevo proceso."
+        respuesta = "Comando no reconocido. Escribí 'reiniciar' para volver a empezar."
 
     if st.session_state.estado_chat != "terminado" or prompt.lower() != "reiniciar":
         st.session_state.mensajes.append({"role": "assistant", "content": respuesta})
