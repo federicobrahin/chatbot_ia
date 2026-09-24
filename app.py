@@ -3,6 +3,7 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import google.generativeai as genai
+import re  # Agregamos esta librería para leer mejor los ingredientes
 
 # ==========================================
 # 1. MOTOR DE INFERENCIA DIFUSO (SED)
@@ -78,11 +79,11 @@ with st.sidebar:
 # --- TÍTULO PRINCIPAL PROLIJO ---
 st.title("👨‍🍳 Chefbot experto difuso con IA")
 st.markdown("Calculo la complejidad del plato mediante lógica difusa y genero la receta paso a paso utilizando inteligencia artificial.")
-st.divider() # Una línea separadora sutil para que quede más lindo
+st.divider() 
 
 # Configuración de estado inicial
 if "mensajes" not in st.session_state:
-    st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! ¿Qué cocinamos hoy? Decime, ¿qué ingredientes tenés en la heladera separados por coma? (Ej: pollo, cebolla, papa)"}]
+    st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! ¿Qué cocinamos hoy? Decime, ¿qué ingredientes tenés en la heladera? Podés separarlos por coma o espacios (Ej: pollo cebolla papa)"}]
 if "estado_chat" not in st.session_state:
     st.session_state.estado_chat = "pidiendo_ingredientes"
 if "datos" not in st.session_state:
@@ -101,8 +102,10 @@ if prompt:
         st.markdown(prompt)
 
     if st.session_state.estado_chat == "pidiendo_ingredientes":
-        st.session_state.datos['ingredientes_lista'] = prompt.split(',')
+        # Usamos RegEx para separar por comas, espacios o la letra "y"
+        st.session_state.datos['ingredientes_lista'] = [i.strip() for i in re.split(r',|\sy\s|\s+', prompt) if i.strip()]
         st.session_state.datos['cant_ingredientes'] = len(st.session_state.datos['ingredientes_lista'])
+        
         respuesta = "¡Anotado! Ahora decime, ¿cuánto **tiempo libre** tenés para cocinar hoy? (minutos, ej: 30)"
         st.session_state.estado_chat = "pidiendo_tiempo"
 
