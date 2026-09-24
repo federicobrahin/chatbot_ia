@@ -1,0 +1,5 @@
+streamlit
+scikit-fuzzy
+numpy
+networkx
+google-generativeai
