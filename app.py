@@ -57,12 +57,30 @@ def crear_sistema_difuso():
 # ==========================================
 # 2. INTERFAZ Y CONEXIÓN A GEMINI
 # ==========================================
-st.set_page_config(page_title="ChefBot Inteligente", page_icon="👨‍🍳")
+st.set_page_config(page_title="Chefbot inteligente", page_icon="👨‍🍳")
 
-st.title("👨‍🍳 ChefBot Experto Difuso con IA")
-st.write("Calculo la complejidad con Lógica Difusa y genero la receta con IA.")
+# --- BARRA LATERAL CON INFORMACIÓN DEL PROYECTO ---
+with st.sidebar:
+    st.subheader("📚 Inteligencia Artificial")
+    st.markdown("**Profesor:**")
+    st.markdown("Mag. Ing. Mario Marcelo Figueroa de la Cruz")
+    
+    st.markdown("**Integrantes del grupo:**")
+    st.markdown("""
+    - Antúnez Ruiz Huidobro, Facundo
+    - Brahin, Federico Tomás
+    - Cáceres Prado, Martín
+    - Matos Villalba, Luis Humberto
+    - Rodríguez Marat, Martín
+    """)
+    st.caption("Universidad del Norte Santo Tomás de Aquino (UNSTA)")
 
-# Configuración de estado inicial (Saludo genérico)
+# --- TÍTULO PRINCIPAL PROLIJO ---
+st.title("👨‍🍳 Chefbot experto difuso con IA")
+st.markdown("Calculo la complejidad del plato mediante lógica difusa y genero la receta paso a paso utilizando inteligencia artificial.")
+st.divider() # Una línea separadora sutil para que quede más lindo
+
+# Configuración de estado inicial
 if "mensajes" not in st.session_state:
     st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! ¿Qué cocinamos hoy? Decime, ¿qué ingredientes tenés en la heladera separados por coma? (Ej: pollo, cebolla, papa)"}]
 if "estado_chat" not in st.session_state:
@@ -109,13 +127,12 @@ if prompt:
             simulador.compute()
             puntaje = simulador.output['complejidad']
             
-            if puntaje < 35: categoria = "Básica y Rápida 🟢"
+            if puntaje < 35: categoria = "Básica y rápida 🟢"
             elif puntaje < 70: categoria = "Elaborada 🟡"
             else: categoria = "Gourmet / Desafiante 🔴"
 
             # --- LLAMADA A GEMINI CON SECRETS ---
             try:
-                # Intenta leer la API Key de los secretos de Streamlit
                 api_key = st.secrets["GEMINI_API_KEY"]
                 genai.configure(api_key=api_key)
                 
@@ -142,10 +159,10 @@ if prompt:
                 receta = f"❌ Error al conectar con Gemini: {e}"
 
             respuesta = f"""
-            🧠 **Diagnóstico del Sistema Experto Difuso:**
+            🧠 **Diagnóstico del sistema experto difuso:**
             - Complejidad: **{puntaje:.2f}/100** ({categoria})
             
-            👨‍🍳 **Receta Generada por IA:**
+            👨‍🍳 **Receta sugerida:**
             {receta}
             
             *(Escribí "reiniciar" si querés probar con otra cosa)*
