@@ -3,7 +3,7 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import google.generativeai as genai
-import re  # Agregamos esta librería para leer mejor los ingredientes
+import re
 
 # ==========================================
 # 1. MOTOR DE INFERENCIA DIFUSO (SED)
@@ -102,7 +102,6 @@ if prompt:
         st.markdown(prompt)
 
     if st.session_state.estado_chat == "pidiendo_ingredientes":
-        # Usamos RegEx para separar por comas, espacios o la letra "y"
         st.session_state.datos['ingredientes_lista'] = [i.strip() for i in re.split(r',|\sy\s|\s+', prompt) if i.strip()]
         st.session_state.datos['cant_ingredientes'] = len(st.session_state.datos['ingredientes_lista'])
         
@@ -134,32 +133,36 @@ if prompt:
             elif puntaje < 70: categoria = "Elaborada 🟡"
             else: categoria = "Gourmet / Desafiante 🔴"
 
-            # --- LLAMADA A GEMINI CON SECRETS ---
+            # --- LLAMADA A GEMINI CON SECRETS, SPINNER Y TIMEOUT ---
             try:
                 api_key = st.secrets["GEMINI_API_KEY"]
                 genai.configure(api_key=api_key)
                 
                 modelo = genai.GenerativeModel('gemini-3.6-flash')
                 
-                prompt_gemini = f"""
-                Sos un chef profesional. El usuario te pidió cocinar con estos ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
-                
-                REGLA ESTRICTA: Primero, analizá si TODOS los ingredientes ingresados son comestibles y reales. 
-                Si el usuario ingresó objetos no comestibles (ej: tornillos, piedras, madera, veneno, etc.) o cosas sin sentido:
-                NO des ninguna receta. Respondé con un tono gracioso diciendo que sos un Chef, no un ferretero ni un mago, y decile que escriba "reiniciar" para intentar con comida de verdad. Ignorá el resto de las instrucciones.
+                # Spinner visual para matar la ansiedad
+                with st.spinner('👨‍🍳 El chef está analizando los datos y creando tu receta... ¡Bancame un toque!'):
+                    prompt_gemini = f"""
+                    Sos un chef profesional. El usuario te pidió cocinar con estos ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
+                    
+                    REGLA ESTRICTA: Primero, analizá si TODOS los ingredientes ingresados son comestibles y reales. 
+                    Si el usuario ingresó objetos no comestibles (ej: tornillos, piedras, madera, veneno, etc.) o cosas sin sentido:
+                    NO des ninguna receta. Respondé con un tono gracioso diciendo que sos un Chef, no un ferretero ni un mago, y decile que escriba "reiniciar" para intentar con comida de verdad. Ignorá el resto de las instrucciones.
 
-                Si los ingredientes SON comestibles, seguí estas instrucciones:
-                Un sistema experto difuso determinó que la receta debe tener una complejidad: {categoria} (Puntaje: {puntaje}/100).
-                El usuario tiene {st.session_state.datos['tiempo']} minutos libres y un nivel de habilidad de {st.session_state.datos['habilidad']}/10.
-                Dame una receta paso a paso que cumpla con estos criterios. Sé directo, amigable y estructurá la respuesta con títulos y viñetas.
-                """
-                
-                respuesta_gemini = modelo.generate_content(prompt_gemini)
-                receta = respuesta_gemini.text
+                    Si los ingredientes SON comestibles, seguí estas instrucciones:
+                    Un sistema experto difuso determinó que la receta debe tener una complejidad: {categoria} (Puntaje: {puntaje}/100).
+                    El usuario tiene {st.session_state.datos['tiempo']} minutos libres y un nivel de habilidad de {st.session_state.datos['habilidad']}/10.
+                    Dame una receta paso a paso que cumpla con estos criterios. Sé directo, amigable y estructurá la respuesta con títulos y viñetas.
+                    """
+                    
+                    # Llamada a Google con tiempo límite de 15 segundos
+                    respuesta_gemini = modelo.generate_content(prompt_gemini, request_options={"timeout": 15})
+                    receta = respuesta_gemini.text
+                    
             except KeyError:
                 receta = "❌ Error: No se encontró la API Key en los secretos de Streamlit (st.secrets)."
             except Exception as e:
-                receta = f"❌ Error al conectar con Gemini: {e}"
+                receta = f"❌ Error de conexión: Google tardó demasiado o rebotó la conexión. Intentá de nuevo en unos segundos. (Detalle: {e})"
 
             respuesta = f"""
             🧠 **Diagnóstico del sistema experto difuso:**
