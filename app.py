@@ -133,33 +133,31 @@ if prompt:
             elif puntaje < 70: categoria = "Elaborada 🟡"
             else: categoria = "Gourmet / Desafiante 🔴"
 
-            # --- LLAMADA A GEMINI OPTIMIZADA PARA VELOCIDAD ---
+            # --- LLAMADA A GEMINI CORREGIDA ---
             try:
                 api_key = st.secrets["GEMINI_API_KEY"]
                 genai.configure(api_key=api_key)
                 
                 modelo = genai.GenerativeModel('gemini-3.6-flash')
                 
-                with st.spinner('👨‍🍳 El chef está analizando los datos y creando tu receta... Un momento por favor.'):
+                with st.spinner('👨‍🍳 Analizando parámetros y generando receta... Aguardá un instante.'):
                     prompt_gemini = f"""
-                    Sos un chef profesional. El usuario te pidió cocinar con estos ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
+                    Generá una receta directa utilizando estos ingredientes: {', '.join(st.session_state.datos['ingredientes_lista'])}.
                     
-                    REGLA ESTRICTA: Analizá si TODOS los ingredientes son comestibles y reales. 
-                    Si el usuario ingresó objetos no comestibles (ej: tornillos, maderas):
-                    Respondé educadamente que el sistema solo procesa alimentos y pedí que reinicie. No des ninguna receta.
+                    REGLA: Si alguno de los ingredientes ingresados no es comestible (ej: metal, plástico, madera), respondé amablemente que el sistema solo procesa alimentos y sugerí reiniciar. No des ninguna receta en ese caso.
 
-                    Si los ingredientes SON comestibles:
-                    El sistema experto determinó una complejidad: {categoria} (Puntaje: {puntaje}/100).
-                    Tiempo disponible: {st.session_state.datos['tiempo']} minutos. Habilidad: {st.session_state.datos['habilidad']}/10.
+                    Si son ingredientes válidos, la receta debe ajustarse a estos parámetros evaluados:
+                    - Categoría de complejidad: {categoria}
+                    - Tiempo máximo: {st.session_state.datos['tiempo']} minutos.
+                    - Nivel de habilidad: {st.session_state.datos['habilidad']}/10.
                     
-                    Dame una receta paso a paso que cumpla con estos criterios. Sé directo, amigable y usá viñetas.
-                    MUY IMPORTANTE: Sé BREVE y conciso. Evitá textos muy largos.
+                    INSTRUCCIÓN CRÍTICA: Escribí directamente el título de la receta y los pasos a seguir. No escribas saludos, ni introducciones, ni comentarios sobre tu rol como chef. Andá directo al grano de manera clara y estructurada con viñetas.
                     """
                     
-                    # Forzamos a la IA a responder más rápido limitando la longitud de la respuesta
+                    # Le damos 1500 tokens para que no se quede sin espacio y bajamos un poco la temperatura para que sea más directo
                     respuesta_gemini = modelo.generate_content(
                         prompt_gemini,
-                        generation_config={"max_output_tokens": 500, "temperature": 0.5},
+                        generation_config={"max_output_tokens": 1500, "temperature": 0.4},
                         request_options={"timeout": 90}
                     )
                     receta = respuesta_gemini.text
@@ -167,7 +165,7 @@ if prompt:
             except KeyError:
                 receta = "❌ Error: No se encontró la API Key en los secretos de Streamlit (st.secrets)."
             except Exception as e:
-                receta = f"❌ Error de conexión: La inteligencia artificial tardó demasiado en responder. (Detalle: {e})"
+                receta = f"❌ Error de conexión: La inteligencia artificial tardó demasiado en responder o se cortó la comunicación. (Detalle: {e})"
 
             respuesta = f"""
             🧠 **Diagnóstico del Sistema Experto Difuso:**
